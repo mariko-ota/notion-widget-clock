@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analog Clock</title>
+  <style>
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #ffffff;
+    }
+    svg { display: block; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.07)); }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", sans-serif; }
+  </style>
+</head>
+<body>
+  <svg id="clock" width="300" height="300" viewBox="0 0 300 300" aria-label="analog clock">
+    <!-- Face -->
+    <circle cx="150" cy="150" r="135" fill="#ffffff" stroke="#cccccc" stroke-width="2"></circle>
+
+    <!-- Marks -->
+    <g id="marks"></g>
+
+    <!-- Numbers -->
+    <g id="numbers"></g>
+
+    <!-- Hands -->
+    <line id="hourHand"   x1="150" y1="150" x2="150" y2="90"  stroke="#333333" stroke-width="8" stroke-linecap="round"></line>
+    <line id="minuteHand" x1="150" y1="150" x2="150" y2="60"  stroke="#333333" stroke-width="6" stroke-linecap="round"></line>
+    <line id="secondHand" x1="150" y1="150" x2="150" y2="45"  stroke="#ff6b6b" stroke-width="2" stroke-linecap="round"></line>
+  </svg>
+
+  <script>
+    (() => {
+      const size = 300;
+      const cx = size / 2;
+      const cy = size / 2;
+
+      const marksG = document.getElementById("marks");
+      const numbersG = document.getElementById("numbers");
+      const hourHand = document.getElementById("hourHand");
+      const minuteHand = document.getElementById("minuteHand");
+      const secondHand = document.getElementById("secondHand");
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const el = (tag, attrs = {}) => {
+        const n = document.createElementNS(svgNS, tag);
+        for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+        return n;
+      };
+
+      // Marks (0..59)
+      for (let i = 0; i < 60; i++) {
+        const angle = (i * 6 - 90) * (Math.PI / 180);
+        const isHour = i % 5 === 0;
+        const length = isHour ? size * 0.06 : size * 0.03;
+        const width = isHour ? 2 : 1;
+        const startRadius = size * 0.42;
+
+        const x1 = cx + startRadius * Math.cos(angle);
+        const y1 = cy + startRadius * Math.sin(angle);
+        const x2 = cx + (startRadius - length) * Math.cos(angle);
+        const y2 = cy + (startRadius - length) * Math.sin(angle);
+
+        marksG.appendChild(el("line", {
+          x1, y1, x2, y2,
+          stroke: "#cccccc",
+          "stroke-width": width,
+          "stroke-linecap": "round"
+        }));
+      }
+
+      // Numbers (1..12)
+      for (let i = 1; i <= 12; i++) {
+        const angle = (i * 30 - 90) * (Math.PI / 180);
+        const radius = size * 0.35;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+
+        const t = el("text", {
+          x, y,
+          "text-anchor": "middle",
+          "dominant-baseline": "middle",
+          fill: "#333333",
+          "font-size": size * 0.08,
+          "font-weight": 300
+        });
+        t.textContent = String(i);
+        numbersG.appendChild(t);
+      }
+
+      const tick = () => {
+        const time = new Date();
+        const hours = time.getHours() % 12;
+        const minutes = time.getMinutes();
+        const seconds = time.getSeconds();
+
+        const hourAngle = (hours + minutes / 60) * 30;
+        const minuteAngle = (minutes + seconds / 60) * 6;
+        const secondAngle = seconds * 6;
+
+        hourHand.setAttribute("transform", `rotate(${hourAngle} ${cx} ${cy})`);
+        minuteHand.setAttribute("transform", `rotate(${minuteAngle} ${cx} ${cy})`);
+        secondHand.setAttribute("transform", `rotate(${secondAngle} ${cx} ${cy})`);
+      };
+
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
+</body>
+</html>
