@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analog Clock Widget (No React)</title>
+
+  <!-- Optional: nicer fonts (same idea as the TSX fontMap). Remove if you want fully offline. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@400;600&family=Quicksand:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --panel-bg:#111827; /* similar to gray-900 */
+      --panel-border:#374151; /* gray-700 */
+      --panel-fg:#fff;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", sans-serif;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+      gap:24px;
+      background:#fff;
+      overflow:auto;
+    }
+    .wrap{
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:16px;
+    }
+    #clockSvg{
+      display:block;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 16px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.10);
+      color:#fff;
+      cursor:pointer;
+      user-select:none;
+      backdrop-filter: blur(6px);
+    }
+    .btn:hover{ background:rgba(255,255,255,.18); }
+    .btn-row{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:-64px;
+    }
+    .gear{
+      width:20px;height:20px;display:block;
+    }
+    .panel{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:-80px;
+      margin-top:16px;
+      width:320px;
+      max-height:384px;
+      overflow:auto;
+      background:var(--panel-bg);
+      color:var(--panel-fg);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:18px 18px 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.40);
+      display:none;
+      z-index:10;
+    }
+    .panel.open{ display:block; }
+    .panel h3{
+      margin:0 0 12px;
+      font-size:16px;
+      font-weight:600;
+      text-align:center;
+    }
+    .field{ margin:12px 0; }
+    .field label{
+      display:block;
+      font-size:12px;
+      margin:0 0 6px;
+      opacity:.9;
+    }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .help{
+      font-size:11px;
+      opacity:.6;
+      margin-top:6px;
+    }
+    input[type="range"]{ width:100%; }
+    input[type="color"]{
+      width:100%;
+      height:40px;
+      border:none;
+      padding:0;
+      background:transparent;
+      cursor:pointer;
+      border-radius:10px;
+    }
+    select{
+      width:100%;
+      background:#1f2937;
+      border:1px solid var(--panel-border);
+      border-radius:10px;
+      padding:9px 10px;
+      font-size:13px;
+      color:#fff;
+      outline:none;
+    }
+    .check{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:13px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .check input{ width:16px;height:16px; }
+    .hint{
+      position:absolute;
+      top:-22px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:12px;
+      opacity:.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hint">React/TSX不要：この1枚HTMLだけで動きます</div>
+    <svg id="clockSvg" aria-label="analog clock"></svg>
+
+    <div class="btn-row">
+      <button id="toggleBtn" class="btn" type="button">
+        <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span id="btnText">設定を開く</span>
+      </button>
+    </div>
+
+    <div id="panel" class="panel" role="dialog" aria-label="settings">
+      <h3>時計の設定</h3>
+
+      <div class="field">
+        <label for="size">サイズ</label>
+        <input id="size" type="range" min="200" max="500" />
+        <div class="help"><span id="sizeVal"></span>px</div>
+      </div>
+
+      <div class="field">
+        <label for="style">スタイル</label>
+        <select id="style">
+          <option value="modern">モダン</option>
+          <option value="classic">クラシック</option>
+          <option value="minimal">ミニマル</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="numberFont">数字のフォント</label>
+        <select id="numberFont">
+          <option value="sans-serif">サンセリフ</option>
+          <option value="serif">セリフ</option>
+          <option value="monospace">等幅</option>
+          <option value="rounded">丸ゴシック</option>
+          <option value="elegant">エレガント</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="backgroundColor">背景色</label>
+        <input id="backgroundColor" type="color" />
+      </div>
+
+      <div class="field">
+        <label for="faceColor">文字盤の色</label>
+        <input id="faceColor" type="color" />
+      </div>
+
+      <div class="field">
+        <label for="numbersColor">数字の色</label>
+        <input id="numbersColor" type="color" />
+      </div>
+
+      <div class="field">
+        <label for="hourHandColor">時針の色</label>
+        <input id="hourHandColor" type="color" />
+      </div>
+
+      <div class="field">
+        <label for="minuteHandColor">分針の色</label>
+        <input id="minuteHandColor" type="color" />
+      </div>
+
+      <div class="field">
+        <label for="secondHandColor">秒針の色</label>
+        <input id="secondHandColor" type="color" />
+      </div>
+
+      <div class="field">
+        <label class="check"><input id="showNumbers" type="checkbox" /> 数字を表示</label>
+      </div>
+      <div class="field">
+        <label class="check"><input id="showMarks" type="checkbox" /> 目盛りを表示</label>
+      </div>
+      <div class="field">
+        <label class="check"><input id="showSecondHand" type="checkbox" /> 秒針を表示</label>
+      </div>
+      <div class="field">
+        <label class="check"><input id="showBorder" type="checkbox" /> 外枠の円を表示</label>
+      </div>
+
+      <div class="field">
+        <label for="hourHandWidth">時針の太さ</label>
+        <input id="hourHandWidth" type="range" min="4" max="16" />
+      </div>
+      <div class="field">
+        <label for="minuteHandWidth">分針の太さ</label>
+        <input id="minuteHandWidth" type="range" min="3" max="12" />
+      </div>
+      <div class="field">
+        <label for="secondHandWidth">秒針の太さ</label>
+        <input id="secondHandWidth" type="range" min="1" max="6" />
+      </div>
+
+      <div class="help">※この設定UIはTSX版の内容をほぼそのままHTML化しています。</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  // TSXの初期設定をほぼそのまま移植
+  const settings = {
+    size: 300,
+    backgroundColor: "#ffffff",
+    faceColor: "#ffffff",
+    hourHandColor: "#333333",
+    minuteHandColor: "#333333",
+    secondHandColor: "#ff6b6b",
+    numbersColor: "#333333",
+    marksColor: "#cccccc",
+    showNumbers: true,
+    showSecondHand: true,
+    showMarks: true,
+    showBorder: false,
+    hourHandWidth: 8,
+    minuteHandWidth: 6,
+    secondHandWidth: 2,
+    numberFont: "sans-serif",
+    clockStyle: "modern"
+  };
+
+  const fontMap = {
+    "sans-serif": "'Inter', sans-serif",
+    "serif": "'Playfair Display', 'Georgia', serif",
+    "monospace": "'Courier New', monospace",
+    "rounded": "'Quicksand', system-ui, sans-serif",
+    "elegant": "'Playfair Display', serif"
+  };
+
+  const el = (id) => document.getElementById(id);
+  const clockSvg = el("clockSvg");
+  const panel = el("panel");
+  const toggleBtn = el("toggleBtn");
+  const btnText = el("btnText");
+
+  // --- UI wiring ---
+  const bind = () => {
+    const bindColor = (id, key) => {
+      el(id).value = settings[key];
+      el(id).addEventListener("input", (e) => {
+        settings[key] = e.target.value;
+        applyBackground();
+        renderStatic();
+      });
+    };
+
+    const bindRange = (id, key, onChange) => {
+      el(id).value = settings[key];
+      el(id).addEventListener("input", (e) => {
+        settings[key] = Number(e.target.value);
+        onChange?.();
+        renderStatic();
+      });
+    };
+
+    const bindCheck = (id, key) => {
+      el(id).checked = !!settings[key];
+      el(id).addEventListener("change", (e) => {
+        settings[key] = !!e.target.checked;
+        renderStatic();
+      });
+    };
+
+    bindRange("size", "size", () => {
+      el("sizeVal").textContent = settings.size;
+    });
+    el("sizeVal").textContent = settings.size;
+
+    el("style").value = settings.clockStyle;
+    el("style").addEventListener("change", (e) => {
+      settings.clockStyle = e.target.value;
+      renderStatic();
+    });
+
+    el("numberFont").value = settings.numberFont;
+    el("numberFont").addEventListener("change", (e) => {
+      settings.numberFont = e.target.value;
+      renderStatic();
+    });
+
+    bindColor("backgroundColor", "backgroundColor");
+    bindColor("faceColor", "faceColor");
+    bindColor("numbersColor", "numbersColor");
+    bindColor("hourHandColor", "hourHandColor");
+    bindColor("minuteHandColor", "minuteHandColor");
+    bindColor("secondHandColor", "secondHandColor");
+
+    bindCheck("showNumbers", "showNumbers");
+    bindCheck("showMarks", "showMarks");
+    bindCheck("showSecondHand", "showSecondHand");
+    bindCheck("showBorder", "showBorder");
+
+    bindRange("hourHandWidth", "hourHandWidth");
+    bindRange("minuteHandWidth", "minuteHandWidth");
+    bindRange("secondHandWidth", "secondHandWidth");
+  };
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = panel.classList.toggle("open");
+    btnText.textContent = isOpen ? "設定を閉じる" : "設定を開く";
+  });
+
+  const applyBackground = () => {
+    document.body.style.background = settings.backgroundColor;
+  };
+
+  // --- SVG helpers ---
+  const createSVG = (tag, attrs = {}) => {
+    const node = document.createElementNS(svgNS, tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === null || v === undefined) continue;
+      node.setAttribute(k, String(v));
+    }
+    return node;
+  };
+
+  // Keep references to hand elements for fast ticking
+  let hourHand, minuteHand, secondHand, faceCircle;
+
+  const setSvgShadow = () => {
+    const style = settings.clockStyle;
+    const filter =
+      style === "modern"
+        ? "drop-shadow(0 20px 40px rgba(0,0,0,0.30))"
+        : style === "classic"
+        ? "drop-shadow(0 10px 20px rgba(0,0,0,0.20))"
+        : "none";
+    clockSvg.style.filter = filter;
+  };
+
+  // Render everything that depends on settings (size/colors/toggles)
+  const renderStatic = () => {
+    applyBackground();
+
+    const s = settings.size;
+    const cx = s / 2;
+    const cy = s / 2;
+
+    // Reset SVG
+    clockSvg.replaceChildren();
+    clockSvg.setAttribute("width", s);
+    clockSvg.setAttribute("height", s);
+    clockSvg.setAttribute("viewBox", `0 0 ${s} ${s}`);
+    setSvgShadow();
+
+    // Face
+    faceCircle = createSVG("circle", {
+      cx, cy,
+      r: s * 0.45,
+      fill: settings.faceColor,
+      stroke: settings.showBorder ? settings.marksColor : "none",
+      "stroke-width": settings.showBorder ? 2 : 0
+    });
+    clockSvg.appendChild(faceCircle);
+
+    // Marks
+    if (settings.showMarks) {
+      const startRadius = s * 0.42;
+      for (let i = 0; i < 60; i++) {
+        const angle = (i * 6 - 90) * (Math.PI / 180);
+        const isHour = i % 5 === 0;
+        const length = isHour ? s * 0.06 : s * 0.03;
+        const width = isHour ? 2 : 1;
+
+        const x1 = cx + startRadius * Math.cos(angle);
+        const y1 = cy + startRadius * Math.sin(angle);
+        const x2 = cx + (startRadius - length) * Math.cos(angle);
+        const y2 = cy + (startRadius - length) * Math.sin(angle);
+
+        clockSvg.appendChild(
+          createSVG("line", {
+            x1, y1, x2, y2,
+            stroke: settings.marksColor,
+            "stroke-width": width,
+            "stroke-linecap": "round"
+          })
+        );
+      }
+    }
+
+    // Numbers
+    if (settings.showNumbers) {
+      const radius = s * 0.35;
+      for (let i = 1; i <= 12; i++) {
+        const angle = (i * 30 - 90) * (Math.PI / 180);
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+
+        clockSvg.appendChild(
+          createSVG("text", {
+            x, y,
+            "text-anchor": "middle",
+            "dominant-baseline": "middle",
+            fill: settings.numbersColor,
+            "font-size": s * 0.08,
+            "font-weight": 300,
+            "font-family": fontMap[settings.numberFont] || fontMap["sans-serif"]
+          })
+        ).textContent = String(i);
+      }
+    }
+
+    // Hour hand
+    hourHand = createSVG("line", {
+      x1: cx, y1: cy,
+      x2: cx, y2: cy - s * 0.2,
+      stroke: settings.hourHandColor,
+      "stroke-width": settings.hourHandWidth,
+      "stroke-linecap": "round"
+    });
+    clockSvg.appendChild(hourHand);
+
+    // Minute hand
+    minuteHand = createSVG("line", {
+      x1: cx, y1: cy,
+      x2: cx, y2: cy - s * 0.3,
+      stroke: settings.minuteHandColor,
+      "stroke-width": settings.minuteHandWidth,
+      "stroke-linecap": "round"
+    });
+    clockSvg.appendChild(minuteHand);
+
+    // Second hand
+    if (settings.showSecondHand) {
+      secondHand = createSVG("line", {
+        x1: cx, y1: cy,
+        x2: cx, y2: cy - s * 0.35,
+        stroke: settings.secondHandColor,
+        "stroke-width": settings.secondHandWidth,
+        "stroke-linecap": "round"
+      });
+      clockSvg.appendChild(secondHand);
+    } else {
+      secondHand = null;
+    }
+
+    // tick once to place hands
+    tick();
+  };
+
+  const tick = () => {
+    const t = new Date();
+    const hours = t.getHours();
+    const minutes = t.getMinutes();
+    const seconds = t.getSeconds();
+
+    const s = settings.size;
+    const cx = s / 2;
+    const cy = s / 2;
+
+    const hourAngle = (hours % 12) * 30 + minutes * 0.5;
+    const minuteAngle = minutes * 6 + seconds * 0.1;
+    const secondAngle = seconds * 6;
+
+    if (hourHand) hourHand.setAttribute("transform", `rotate(${hourAngle} ${cx} ${cy})`);
+    if (minuteHand) minuteHand.setAttribute("transform", `rotate(${minuteAngle} ${cx} ${cy})`);
+    if (secondHand) secondHand.setAttribute("transform", `rotate(${secondAngle} ${cx} ${cy})`);
+  };
+
+  bind();
+  applyBackground();
+  renderStatic();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
